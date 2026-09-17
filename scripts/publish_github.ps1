@@ -88,10 +88,27 @@ try {
     -ContentType "application/json" `
     -Body $treeBody
 
+  $authorName = (git show -s --format=%an HEAD).Trim()
+  $authorEmail = (git show -s --format=%ae HEAD).Trim()
+  $authorDate = (git show -s --format=%aI HEAD).Trim()
+  $committerName = (git show -s --format=%cn HEAD).Trim()
+  $committerEmail = (git show -s --format=%ce HEAD).Trim()
+  $committerDate = (git show -s --format=%cI HEAD).Trim()
+
   $commitPayload = @{
     message = $Message
     tree = $tree.sha
     parents = @()
+    author = @{
+      name = $authorName
+      email = $authorEmail
+      date = $authorDate
+    }
+    committer = @{
+      name = $committerName
+      email = $committerEmail
+      date = $committerDate
+    }
   }
   if ($parentSha) {
     $commitPayload.parents = @($parentSha)
@@ -127,6 +144,8 @@ try {
 
   Write-Output "Published $($commit.sha)"
   Write-Output "https://github.com/$Owner/$Repo/commit/$($commit.sha)"
+  $localSha = (git rev-parse HEAD).Trim()
+  Write-Output "Local HEAD $localSha"
 } finally {
   Pop-Location
 }
