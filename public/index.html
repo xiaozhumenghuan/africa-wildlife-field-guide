@@ -109,8 +109,9 @@ footer{max-width:1180px;margin:0 auto;padding:0 14px 50px;color:var(--muted);fon
 <nav class="toolbar" aria-label="筛选工具"><div class="toolbar-inner">
 <div class="search-row"><div class="search-wrap">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-<input id="search" type="search" placeholder="搜索中文名、英文名、地点或标签…" autocomplete="off">
-</div><button id="clear-search" class="icon-btn" type="button" aria-label="清除搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div>
+<input id="search" type="search" placeholder="搜索中文名、英文名、地点或标签…" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search">
+</div><button id="search-go" class="icon-btn" type="button" aria-label="执行搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+<button id="clear-search" class="icon-btn" type="button" aria-label="清除搜索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div>
 <div class="filters" id="country-filters">
 <button class="filter" data-country="全部" aria-pressed="true">全部地区</button>
 <button class="filter" data-country="肯尼亚野生动物" aria-pressed="false">肯尼亚</button>
@@ -2536,28 +2537,37 @@ footer{max-width:1180px;margin:0 auto;padding:0 14px 50px;color:var(--muted);fon
   const categories = [...document.querySelectorAll('details.category')];
   let country = '全部';
   let category = '全部';
+  let searchTimer;
   const storeKey = 'africa-wildlife-checks-v1';
   let checks = {};
   try { checks = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch (_) { checks = {}; }
 
   const normalize = value => (value || '').trim().toLowerCase();
-  function apply() {
+  function apply(shouldScroll = false) {
     const query = normalize(search.value);
     let visible = 0;
+    let firstVisible = null;
     cards.forEach(card => {
       const countryOk = country === '全部' || card.dataset.country === country;
       const categoryOk = category === '全部' || card.dataset.category === category;
       const queryOk = !query || card.dataset.search.includes(query);
       const show = countryOk && categoryOk && queryOk;
       card.hidden = !show;
-      if (show) visible += 1;
+      if (show) {
+        visible += 1;
+        firstVisible ||= card;
+      }
     });
-    resultCount.textContent = `${visible} 种`;
+    resultCount.textContent = query ? `找到 ${visible} 种` : `${visible} 种`;
     empty.classList.toggle('show', visible === 0);
     categories.forEach(details => {
       const hasVisible = [...details.querySelectorAll('.card')].some(card => !card.hidden);
       details.hidden = !hasVisible;
+      if (query && hasVisible) details.open = true;
     });
+    if (shouldScroll && firstVisible) {
+      firstVisible.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
   }
 
   function updateProgress() {
@@ -2601,13 +2611,28 @@ footer{max-width:1180px;margin:0 auto;padding:0 14px 50px;color:var(--muted);fon
     apply();
   });
 
-  search.addEventListener('input', apply);
+  search.addEventListener('input', () => {
+    apply();
+    window.clearTimeout(searchTimer);
+    if (normalize(search.value)) {
+      searchTimer = window.setTimeout(() => apply(true), 450);
+    }
+  });
+  search.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      window.clearTimeout(searchTimer);
+      apply(true);
+      search.blur();
+    }
+  });
+  document.getElementById('search-go').addEventListener('click', () => apply(true));
   clearSearch.addEventListener('click', () => { search.value = ''; apply(); search.focus(); });
   document.body.addEventListener('click', event => {
     const tag = event.target.closest('[data-tag]');
     if (!tag) return;
     search.value = tag.dataset.tag.replace('#', '');
-    apply();
+    apply(true);
   });
   document.getElementById('open-all').addEventListener('click', () => {
     categories.forEach(details => { if (!details.hidden) details.open = true; });
