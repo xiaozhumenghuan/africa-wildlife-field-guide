@@ -1,0 +1,14 @@
+{
+  "name": "africa-wildlife-field-guide",
+  "version": "1.0.0",
+  "private": true,
+  "description": "肯尼亚与马达加斯加野生动物离线随身图鉴",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "packageManager": "pnpm@11.19.0"
+}
